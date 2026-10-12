@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weighted CGPA Calculator</title>
+  <meta name="description" content="Free weighted CGPA calculator: semester GPA from course grades, aggregate CGPA from semester GPAs, and incremental CGPA. Runs entirely in your browser.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+
+  <!-- Google Analytics -->
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-83ZYC1LSTS"></script>
+  <script>
+     window.dataLayer = window.dataLayer || [];
+     function gtag(){dataLayer.push(arguments);}
+     gtag('js', new Date());
+
+     gtag('config', 'G-83ZYC1LSTS');
+  </script>
+
+  <!-- Apply the saved theme before first paint to avoid a flash (dark is the default) -->
+  <script>
+    try {
+      if (localStorage.getItem('cgpa-calc:theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch (e) { /* storage unavailable: keep default */ }
+  </script>
+
+  <!-- Inter, matching the NPTEL quiz site -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/calculator.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="./">CGPA Calculator</a>
+      <button type="button" class="btn" id="theme-toggle">Light mode</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="page-head">
+        <h1>Weighted CGPA Calculator</h1>
+        <p class="muted">Every result is weighted by credits. Everything runs in your browser, and nothing you enter is uploaded. Check your university's rules before relying on the numbers.</p>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tabs" role="tablist" aria-label="Calculators">
+        <button type="button" class="tab" role="tab" id="tab-semester" data-tab="semester" aria-controls="panel-semester" aria-selected="true">Semester GPA</button>
+        <button type="button" class="tab" role="tab" id="tab-aggregate" data-tab="aggregate" aria-controls="panel-aggregate" aria-selected="false" tabindex="-1">Aggregate CGPA</button>
+        <button type="button" class="tab" role="tab" id="tab-incremental" data-tab="incremental" aria-controls="panel-incremental" aria-selected="false" tabindex="-1">Incremental CGPA</button>
+      </div>
+
+      <!-- 1. Course-wise semester GPA -->
+      <section class="tab-panel" id="panel-semester" role="tabpanel" aria-labelledby="tab-semester">
+        <p class="hint">Add each course with its credits and grade to get the GPA for one semester.</p>
+        <div class="card">
+          <ul class="rows"></ul>
+          <button type="button" class="add-btn"><span data-icon="plus"></span>Add course</button>
+          <div data-toolbar></div>
+        </div>
+        <p class="notice" data-error role="alert" hidden></p>
+        <div class="card result" data-result aria-live="polite" hidden></div>
+      </section>
+
+      <!-- 2. Aggregate CGPA from semester GPAs -->
+      <section class="tab-panel" id="panel-aggregate" role="tabpanel" aria-labelledby="tab-aggregate" hidden>
+        <p class="hint">Add each semester with its total credits and GPA to get your overall CGPA.</p>
+        <div class="card">
+          <ul class="rows"></ul>
+          <button type="button" class="add-btn"><span data-icon="plus"></span>Add semester</button>
+          <div data-toolbar></div>
+        </div>
+        <p class="notice" data-error role="alert" hidden></p>
+        <div class="card result" data-result aria-live="polite" hidden></div>
+      </section>
+
+      <!-- 3. Incremental CGPA -->
+      <section class="tab-panel" id="panel-incremental" role="tabpanel" aria-labelledby="tab-incremental" hidden>
+        <p class="hint">Already have a CGPA? Add your next semester to see the updated figure.</p>
+        <div class="card">
+          <div class="form-grid">
+            <fieldset class="group">
+              <legend>Completed so far</legend>
+              <div class="field">
+                <label class="field-label" for="inc-prev-credits">Total credits</label>
+                <input class="ctl" id="inc-prev-credits" type="number" min="0" step="0.5" inputmode="decimal" placeholder="e.g. 80">
+              </div>
+              <div class="field">
+                <label class="field-label" for="inc-prev-cgpa">CGPA</label>
+                <input class="ctl" id="inc-prev-cgpa" type="number" min="0" max="10" step="0.01" inputmode="decimal" placeholder="e.g. 8.75">
+              </div>
+            </fieldset>
+            <fieldset class="group">
+              <legend>Next semester</legend>
+              <div class="field">
+                <label class="field-label" for="inc-next-credits">Credits</label>
+                <input class="ctl" id="inc-next-credits" type="number" min="0" step="0.5" inputmode="decimal" placeholder="e.g. 22">
+              </div>
+              <div class="field">
+                <label class="field-label" for="inc-next-gpa">GPA</label>
+                <input class="ctl" id="inc-next-gpa" type="number" min="0" max="10" step="0.01" inputmode="decimal" placeholder="e.g. 9.10">
+              </div>
+            </fieldset>
+          </div>
+          <div data-toolbar></div>
+        </div>
+        <p class="notice" data-error role="alert" hidden></p>
+        <div class="card result" data-result aria-live="polite" hidden></div>
+      </section>
+
+      <!-- Grade reference -->
+      <details class="card ref">
+        <summary>Grade scale</summary>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Grade</th><th class="num">Points</th></tr></thead>
+            <tbody>
+              <tr><td>S</td><td class="num">10.0</td></tr>
+              <tr><td>A</td><td class="num">9.0</td></tr>
+              <tr><td>B</td><td class="num">8.0</td></tr>
+              <tr><td>C</td><td class="num">7.0</td></tr>
+              <tr><td>D</td><td class="num">6.0</td></tr>
+              <tr><td>E</td><td class="num">5.0</td></tr>
+              <tr><td>F / N (fail / NA)</td><td class="num">0.0</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">GPA = sum of (credits &times; grade points) &divide; sum of credits. An F / N course counts as 0 points and its credits stay in the total.</p>
+      </details>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p>Made by Felicity Iris using Claude :)</p>
+      <p class="links">
+        <a href="https://github.com/FelicityIris/staticcgpacalculator" rel="noopener">Source code</a>
+        <a href="https://github.com/FelicityIris" rel="noopener">GitHub</a>
+        <a href="https://bsky.app/profile/felicityiris.bsky.social" rel="noopener">Bluesky</a>
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener">License: GPLv3</a>
+      </p>
+      <p>Anonymous usage statistics are collected with Google Analytics.</p>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Toolbar shared by all three calculators (cloned by js/calculator.js) -->
+  <template id="toolbar-tpl">
+    <div class="toolbar" role="group" aria-label="Actions">
+      <button type="button" class="btn btn-icon" data-action="clear"><span data-icon="clear"></span>Clear all</button>
+      <span class="tip" data-tip-for="reset" data-tip="">
+        <button type="button" class="btn btn-icon" data-action="reset"><span data-icon="reset"></span>Reset</button>
+      </span>
+      <span class="save-group">
+        <span class="tip" data-tip-for="save" data-tip="">
+          <button type="button" class="btn btn-icon" data-action="save"><span data-icon="save"></span>Save</button>
+        </span>
+        <span class="tip" data-tip="Delete saved data from this browser">
+          <button type="button" class="btn btn-icon btn-square" data-action="forget" aria-label="Delete saved data" hidden><span data-icon="trash"></span></button>
+        </span>
+      </span>
+      <button type="button" class="btn btn-primary btn-icon compute" data-action="compute"><span data-icon="calc"></span>Compute</button>
+    </div>
+  </template>
+
+  <!-- Scripts: plain (non-module) so the site also works when opened from disk -->
+  <script src="js/common.js"></script>
+  <script src="js/list-editor.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/semester.js"></script>
+  <script src="js/aggregate.js"></script>
+  <script src="js/incremental.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
